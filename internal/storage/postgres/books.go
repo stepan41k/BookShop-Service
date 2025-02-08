@@ -22,8 +22,8 @@ func (p *PGPool) GetBooks() ([]storage.Book, error) {
 		err = rows.Scan(
 			&item.ID,
 			&item.Name,
-			&item.AuthorID,
-			&item.GenreID,
+			&item.Author,
+			&item.Genre,
 			&item.Price,
 		)
 		if err != nil {
@@ -35,31 +35,32 @@ func (p *PGPool) GetBooks() ([]storage.Book, error) {
 	return data, nil
 }
 
-func (p *PGPool) NewBook(item storage.Book) (id int, err error) {
+func (p *PGPool) SaveBook(item storage.Book) (id int64, err error) {
 	err = p.pool.QueryRow(context.Background(), `
 		INSERT INTO books (name, author_id, genre_id, price)
 		VALUES ($1, $2, $3, $4)
 		RETURNING id;`,
 		item.Name,
-		item.AuthorID,
-		item.GenreID,
+		item.Author,
+		item.Genre,
 		item.Price,
 		).Scan(&id)
 	
 	return id, err
 }
 
-func (p *PGPool) GetBookByID(id int) (storage.Book, error) {
+func (p *PGPool) GetBookByName(name string) (storage.Book, error) {
 	var book storage.Book
+
 	err := p.pool.QueryRow(context.Background(), `
 		SELECT id, name, author_id, genre_id, price
 		FROM books
-		WHERE id = $1;
-	`,	id).Scan(
+		WHERE name = $1;
+	`,	name).Scan(
 		&book.ID,
 		&book.Name,
-		&book.AuthorID,
-		&book.GenreID,
+		&book.Author,
+		&book.Genre,
 		&book.Price,
 	)
 	return book, err
@@ -73,7 +74,7 @@ func (p *PGPool) UpdateBook(item string, newBook storage.Book)(storage.Book, err
 	UPDATE books
 	SET name = $1, author_id = $2, genre_id = $3, price = $4
 	WHERE name = $5`,
-	newBook.Name, newBook.AuthorID, newBook.GenreID, newBook.Price, item)
+	newBook.Name, newBook.Author, newBook.Genre, newBook.Price, item)
 		
 	return book, err
 }

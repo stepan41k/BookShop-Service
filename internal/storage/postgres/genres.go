@@ -2,79 +2,52 @@ package postgres
 
 import (
 	"context"
-	"github.com/stepan41k/testMidlware/internal/storage"
+	"database/sql"
+	"errors"
+	"fmt"
 )
 
-func (p *PGPool) CreateGenre(newGenre storage.Genre) (id int ,err error) {
+func (p *PGPool) SaveGenre(newGenre string) (int64, error) {
 
-	err = p.pool.QueryRow(context.Background(), `
+	const op = "storage.postgres.genres.SaveGenre"
+
+	row := p.pool.QueryRow(context.Background(), `
 	INSERT INTO genres (genre)
 	VALUES($1)
 	RETURNING id;
-	`, newGenre.Genre).Scan(
-		id,
-	)
+	`, newGenre)
+
+	var id int64
+
+	err := row.Scan(&id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+
 	return id, err
 
 }
 
-func (p *PGPool) ReadGenre() ([]storage.Genre, error) {
-	rows, err := p.pool.Query(context.Background(), `
-		SELECT id, genre
-		FROM genres
-	`)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	var data []storage.Genre
-
-	for rows.Next() {
-		var item storage.Genre
-		err = rows.Scan(
-			&item.ID,
-			&item.Genre,
-		)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, item)
-	}
-	return data, nil
-}
-
-func (p *PGPool) ReadGenreById(id int) (result storage.Genre, err error) {
-	err = p.pool.QueryRow(context.Background(), `
-		SELECT id, genre
-		FROM genres
-		WHERE id = $1
-	`, id).Scan(
-		&result.ID,
-		&result.Genre,
-	)
-
-	return result, err
-}
-
-func (p *PGPool) UpdateGenre(genre string, newGenre storage.Genre) (error) {
-	_, err := p.pool.Exec(context.Background(), `
-		UPDATE genres
-		SET genre = $1
-		WHERE genre = $2
-	`, newGenre.Genre, genre)
-
-	return err
-}
-
 func (p *PGPool) DeleteGenre(genre string) (error) {
 	
+	const op = "storage.postgres.genres.DeleteGenre"
+
 	_, err := p.pool.Exec(context.Background(), `
 		DELETE FROM genres
 		WHERE genre = $1
 	`, genre)
+
+	if err != nil {
+		
+		//TODO:
+		
+		return fmt.Errorf("%s: %w", op, err)
+	}
 
 	return err
 }

@@ -15,7 +15,7 @@ import (
 )
 
 type Request struct {
-	Genre string `json:"genre" validate:"required"`
+	Genre string `json:"genre"`
 }
 
 type Response struct {

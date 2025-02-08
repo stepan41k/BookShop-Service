@@ -2,21 +2,24 @@ package postgres
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type PGPool struct {
-	mu sync.Mutex
+	mu   sync.Mutex
 	pool *pgxpool.Pool
 }
 
 func New(connStr string) (*PGPool, error) {
-	Conn, err := pgxpool.Connect(context.Background(), connStr)
+	const op = "storage.postgres.New"
+
+	pool, err := pgxpool.Connect(context.Background(), connStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	return &PGPool{mu: sync.Mutex{}, pool: Conn}, nil
+	return &PGPool{mu: sync.Mutex{}, pool: pool}, nil
 }

@@ -9,14 +9,20 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/stepan41k/testMidlware/internal/config"
+	deleteAuthor "github.com/stepan41k/testMidlware/internal/http-server/handlers/author/delete"
+	saveAuthor "github.com/stepan41k/testMidlware/internal/http-server/handlers/author/save"
+	deleteGenre "github.com/stepan41k/testMidlware/internal/http-server/handlers/genre/delete"
+	saveGenre "github.com/stepan41k/testMidlware/internal/http-server/handlers/genre/save"
+	deleteBook "github.com/stepan41k/testMidlware/internal/http-server/handlers/book/delete"
+	saveBook "github.com/stepan41k/testMidlware/internal/http-server/handlers/book/save"
 	"github.com/stepan41k/testMidlware/internal/lib/logger/sl"
 	"github.com/stepan41k/testMidlware/internal/storage/postgres"
 )
 
 const (
 	envLocal = "local"
-	envDev = "dev"
-	envProd = "prod"
+	envDev   = "dev"
+	envProd  = "prod"
 )
 
 func main() {
@@ -32,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Error("failed to init storage", sl.Err(err))
 	}
-	
+
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -44,6 +50,8 @@ func main() {
 		r.Post("/", saveBook.New(log, storage))
 		r.Delete("/{book}", deleteBook.New(log, storage))
 		r.Get("/{book}", takeBook.New(log, storage))
+		r.Get("/", takeBooks.New(log, storage))
+		r.Patch("/{book}", updateBook.New(log, storage))
 	})
 
 	router.Route("/genre", func(r chi.Router) {
@@ -56,15 +64,14 @@ func main() {
 		r.Delete("/{book}", deleteAuthor.New(log, storage))
 	})
 
-
 	log.Info("starting server", slog.String("adress", cfg.Adress))
 
 	srv := http.Server{
-		Addr: cfg.Adress,
-		Handler: router,
-		ReadTimeout: cfg.HttpServer.Timeout,
+		Addr:         cfg.Adress,
+		Handler:      router,
+		ReadTimeout:  cfg.HttpServer.Timeout,
 		WriteTimeout: cfg.HttpServer.Timeout,
-		IdleTimeout: cfg.HttpServer.Idle_timeout,
+		IdleTimeout:  cfg.HttpServer.Idle_timeout,
 	}
 
 	if err := srv.ListenAndServe(); err != nil {
@@ -75,7 +82,7 @@ func main() {
 
 }
 
-func setupLogger(env string) *slog.Logger{
+func setupLogger(env string) *slog.Logger {
 	var log *slog.Logger
 
 	switch env {
