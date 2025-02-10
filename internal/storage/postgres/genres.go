@@ -7,19 +7,33 @@ import (
 	"fmt"
 )
 
-func (p *PGPool) SaveGenre(newGenre string) (int64, error) {
+const (
+	statusGenreCreated = "GenreCreated"
+	statusBookCreated = "BookCreated"
+	statusAuthorCreated = "AuthorCreated"
+)
 
+func (p *PGPool) SaveGenre(newGenre string) (id int64, err error) {
 	const op = "storage.postgres.genres.SaveGenre"
 
-	row := p.pool.QueryRow(context.Background(), `
+	tx, err := p.pool.Begin(context.Background())
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(context.Background())
+			return
+		}
+	}()
+
+	err = tx.QueryRow(context.Background(), `
 	INSERT INTO genres (genre)
 	VALUES($1)
 	RETURNING id;
-	`, newGenre)
+	`, newGenre).Scan(&id)
 
-	var id int64
-
-	err := row.Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
@@ -28,13 +42,21 @@ func (p *PGPool) SaveGenre(newGenre string) (int64, error) {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
+	eventPayload := fmt.Sprintf(`
+	{"id": %d, "genre": "%s"}`,
+		id,
+		newGenre)
+
+	if err := p.SaveEvent(tx, statusGenreCreated, eventPayload); err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
 
 	return id, err
 
 }
 
-func (p *PGPool) DeleteGenre(genre string) (error) {
-	
+func (p *PGPool) DeleteGenre(genre string) error {
+
 	const op = "storage.postgres.genres.DeleteGenre"
 
 	_, err := p.pool.Exec(context.Background(), `
@@ -43,12 +65,11 @@ func (p *PGPool) DeleteGenre(genre string) (error) {
 	`, genre)
 
 	if err != nil {
-		
+
 		//TODO:
-		
+
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return err
 }
-

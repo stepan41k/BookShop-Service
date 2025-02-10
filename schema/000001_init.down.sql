@@ -1,5 +1,7 @@
-DROP TABLE genre;
+DROP TABLE books;
 
-DROP TABLE author;
+DROP TABLE events;
 
-DROP TABLE book;
+DROP TABLE authors;
+
+DROP TABLE genres;

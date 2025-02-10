@@ -1,1 +1,0 @@
-go run cmd/book-shop/main.go
