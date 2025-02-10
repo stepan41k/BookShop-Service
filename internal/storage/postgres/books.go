@@ -5,6 +5,12 @@ import (
 	"github.com/stepan41k/testMidlware/internal/storage"
 )
 
+const (
+	statusBookCreated = "BookCreated"
+	statusBookDeleted = "BookDeleted"
+	statusBookUpdated = "BookUpdated"
+)
+
 func (p *PGPool) GetBooks() ([]storage.Book, error) {
 	rows, err := p.pool.Query(context.Background(), `
 		SELECT id, name, author_id, genre_id, price
@@ -35,20 +41,6 @@ func (p *PGPool) GetBooks() ([]storage.Book, error) {
 	return data, nil
 }
 
-func (p *PGPool) SaveBook(item storage.Book) (id int64, err error) {
-	err = p.pool.QueryRow(context.Background(), `
-		INSERT INTO books (name, author_id, genre_id, price)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id;`,
-		item.Name,
-		item.Author,
-		item.Genre,
-		item.Price,
-		).Scan(&id)
-	
-	return id, err
-}
-
 func (p *PGPool) GetBookByName(name string) (storage.Book, error) {
 	var book storage.Book
 
@@ -66,6 +58,28 @@ func (p *PGPool) GetBookByName(name string) (storage.Book, error) {
 	return book, err
 }
 
+func (p *PGPool) SaveBook(item storage.Book) (id int64, err error) {
+	err = p.pool.QueryRow(context.Background(), `
+		INSERT INTO books (name, author_id, genre_id, price)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id;`,
+		item.Name,
+		item.Author,
+		item.Genre,
+		item.Price,
+		).Scan(&id)
+	
+	return id, err
+}
+
+func (p * PGPool) DeleteBook(name string) (error) {
+	_, err := p.pool.Exec(context.Background(), `
+		DELETE FROM books
+		WHERE name = $1
+		`, name)
+	return err
+}
+
 func (p *PGPool) UpdateBook(item string, newBook storage.Book)(storage.Book, error) {
 
 	var book storage.Book
@@ -77,12 +91,4 @@ func (p *PGPool) UpdateBook(item string, newBook storage.Book)(storage.Book, err
 	newBook.Name, newBook.Author, newBook.Genre, newBook.Price, item)
 		
 	return book, err
-}
-
-func (p * PGPool) DeleteBook(name string) (error) {
-	_, err := p.pool.Exec(context.Background(), `
-		DELETE FROM books
-		WHERE name = $1
-		`, name)
-	return err
 }

@@ -11,7 +11,7 @@ import (
 )
 
 type event struct {
-	ID      int `db:"id"`
+	ID      int    `db:"id"`
 	Type    string `db:"event_type"`
 	Payload string `db:"payload"`
 }
@@ -24,7 +24,7 @@ func (p *PGPool) SaveEvent(tx pgx.Tx, eventType string, payload string) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	_, err = tx.Exec(context.Background(), stmt.Name, eventType, payload)
+	_, err = tx.Exec(context.Background(), stmt.SQL, eventType, payload)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -41,7 +41,7 @@ func (p *PGPool) GetNewEvent(ctx context.Context) (domain.Event, error) {
 		WHERE status = 'new'
 		LIMIT 1	
 	`)
-	
+
 	var evt event
 
 	err := row.Scan(&evt.ID, &evt.Type, &evt.Payload)
@@ -54,8 +54,8 @@ func (p *PGPool) GetNewEvent(ctx context.Context) (domain.Event, error) {
 	}
 
 	return domain.Event{
-		ID: evt.ID,
-		Type: evt.Type,
+		ID:      evt.ID,
+		Type:    evt.Type,
 		Payload: evt.Payload,
 	}, nil
 }
@@ -66,7 +66,7 @@ func (p *PGPool) SetDone(id int) error {
 	_, err := p.pool.Exec(context.Background(), `
 		UPDATE events SET status = 'done'
 		WHERE id = $1
-	`)
+	`, id)
 
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)

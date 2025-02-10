@@ -3,10 +3,10 @@ env: "local"
 db:
     username: "postgres"
     host: "localhost"
-    port: "5432"
-    dbname: "books"
+    port: "5436"
+    dbname: "postgres"
     sslmode: "disable"
-
+    
 http_server:
     adress: "localhost:8090"
     timeout: 4s

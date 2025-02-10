@@ -1,21 +1,25 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/stepan41k/testMidlware/internal/config"
 	deleteAuthor "github.com/stepan41k/testMidlware/internal/http-server/handlers/author/delete"
 	saveAuthor "github.com/stepan41k/testMidlware/internal/http-server/handlers/author/save"
-	deleteGenre "github.com/stepan41k/testMidlware/internal/http-server/handlers/genre/delete"
-	saveGenre "github.com/stepan41k/testMidlware/internal/http-server/handlers/genre/save"
 	deleteBook "github.com/stepan41k/testMidlware/internal/http-server/handlers/book/delete"
 	saveBook "github.com/stepan41k/testMidlware/internal/http-server/handlers/book/save"
+	deleteGenre "github.com/stepan41k/testMidlware/internal/http-server/handlers/genre/delete"
+	saveGenre "github.com/stepan41k/testMidlware/internal/http-server/handlers/genre/save"
+	"github.com/stepan41k/testMidlware/internal/lib/logger/handlers/slogpretty"
 	"github.com/stepan41k/testMidlware/internal/lib/logger/sl"
+	eventsender "github.com/stepan41k/testMidlware/internal/services/event-sender"
 	"github.com/stepan41k/testMidlware/internal/storage/postgres"
 )
 
@@ -34,7 +38,7 @@ func main() {
 	log.Error("error messages are enabled")
 
 	storage, err := postgres.New(fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.Username, cfg.DBName, cfg.Password, cfg.SSLMode))
+		cfg.Host, cfg.Port, cfg.Username, cfg.DBName, os.Getenv("DB_PASSWORD"), cfg.SSLMode))
 	if err != nil {
 		log.Error("failed to init storage", sl.Err(err))
 	}
@@ -56,12 +60,12 @@ func main() {
 
 	router.Route("/genre", func(r chi.Router) {
 		r.Post("/", saveGenre.New(log, storage))
-		r.Delete("/{book}", deleteGenre.New(log, storage))
+		r.Delete("/{genre}", deleteGenre.New(log, storage))
 	})
 
 	router.Route("/author", func(r chi.Router) {
 		r.Post("/", saveAuthor.New(log, storage))
-		r.Delete("/{book}", deleteAuthor.New(log, storage))
+		r.Delete("/{author}", deleteAuthor.New(log, storage))
 	})
 
 	log.Info("starting server", slog.String("adress", cfg.Adress))
@@ -73,6 +77,9 @@ func main() {
 		WriteTimeout: cfg.HttpServer.Timeout,
 		IdleTimeout:  cfg.HttpServer.Idle_timeout,
 	}
+
+	sender := eventsender.New(storage, log)
+	sender.StartProcessEvents(context.Background(), 5*time.Second)
 
 	if err := srv.ListenAndServe(); err != nil {
 		log.Error("failed to start server")
@@ -87,9 +94,7 @@ func setupLogger(env string) *slog.Logger {
 
 	switch env {
 	case envLocal:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
+		log = setupPrettySlog()
 	case envDev:
 		log = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
@@ -101,4 +106,16 @@ func setupLogger(env string) *slog.Logger {
 	}
 
 	return log
+}
+
+func setupPrettySlog() *slog.Logger {
+	opts := slogpretty.PrettyHandlerOptions{
+		SlogOpts: &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+
+	handler := opts.NewPrettyHandler(os.Stdout)
+
+	return slog.New(handler)
 }

@@ -15,7 +15,7 @@ import (
 )
 
 type Request struct {
-	Author string `json:"author"`
+	Author string `json:"author" validate:"required"`
 }
 
 type Response struct {
