@@ -13,11 +13,13 @@ const (
 	statusBookUpdated = "BookUpdated"
 )
 
-func (p *PGPool) GetBooks() ([]storage.Book, error) {
+func (p *PGPool) GetBooksByAuthor(author string) ([]storage.Book, error) {
+	
 	rows, err := p.pool.Query(context.Background(), `
 		SELECT id, name, author_id, genre_id, price
-		FROM books;
-	`)
+		FROM books
+		WHERE author = $1;
+	`, author)
 	if err != nil {
 		return nil, err
 	}
@@ -43,10 +45,44 @@ func (p *PGPool) GetBooks() ([]storage.Book, error) {
 	return data, nil
 }
 
-func (p *PGPool) GetBookByName(name string) (storage.Book, error) {
-	var book storage.Book
+func (p *PGPool) GetBooksByGenre(genre string) ([]storage.Book, error) {
+	const op = "storage.postgres.books.GetBooksByGenre"
 
-	err := p.pool.QueryRow(context.Background(), `
+	rows, err := p.pool.Query(context.Background(), `
+		SELECT id, name, author_id, genre_id, price
+		FROM books
+		WHERE genre = $1;
+	`, genre)
+
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	defer rows.Close()
+
+	var data []storage.Book
+	for rows.Next() {
+		var item storage.Book
+		err = rows.Scan(
+			&item.ID,
+			&item.Name,
+			&item.Author,
+			&item.Genre,
+			&item.Price,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+		data = append(data, item)
+	}
+
+	return data, nil
+}
+
+func (p *PGPool) GetBookByName(name string) (book storage.Book, err error) {
+	const op = "storage.postgres.books.GetBookByName"
+
+	err = p.pool.QueryRow(context.Background(), `
 		SELECT id, name, author_id, genre_id, price
 		FROM books
 		WHERE name = $1;
@@ -57,7 +93,12 @@ func (p *PGPool) GetBookByName(name string) (storage.Book, error) {
 		&book.Genre,
 		&book.Price,
 	)
-	return book, err
+
+	if err != nil {
+		return storage.Book{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return book, nil
 }
 
 func (p *PGPool) SaveBook(item storage.Book) (id int64, err error) {
@@ -116,22 +157,32 @@ func (p *PGPool) SaveBook(item storage.Book) (id int64, err error) {
 }
 
 func (p * PGPool) DeleteBook(name string) (error) {
+	const op = "storage.postgres.books.DeleteBook"
+
 	_, err := p.pool.Exec(context.Background(), `
 		DELETE FROM books
 		WHERE name = $1
 		`, name)
-	return err
+
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
 }
 
-func (p *PGPool) UpdateBook(item string, newBook storage.Book)(storage.Book, error) {
-
-	var book storage.Book
+func (p *PGPool) UpdateBook(oldBook string, newBook storage.Book)(error) {
+	const op = "storage.postgres.books.UpdateBook"
 
 	_, err := p.pool.Exec(context.Background(), `
 	UPDATE books
 	SET name = $1, author_id = $2, genre_id = $3, price = $4
 	WHERE name = $5`,
-	newBook.Name, newBook.Author, newBook.Genre, newBook.Price, item)
+	newBook.Name, newBook.Author, newBook.Genre, newBook.Price, oldBook)
+	
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
 		
-	return book, err
+	return nil
 }
