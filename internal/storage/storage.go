@@ -6,10 +6,10 @@ import (
 
 type Book struct {
 	ID     int     `json:"id"`
-	Name   string  `json:"name"`
-	Author string  `json:"author"`
-	Genre  string  `json:"genre"`
-	Price  float32 `json:"float"`
+	Name   string  `json:"name" validate:"required"`
+	Author string  `json:"author" validate:"required"`
+	Genre  string  `json:"genre" validate:"required"`
+	Price  string `json:"price" validate:"required"`
 }
 
 type Genre struct {

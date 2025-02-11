@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+
 	"github.com/stepan41k/testMidlware/internal/storage"
 )
 
@@ -59,9 +61,33 @@ func (p *PGPool) GetBookByName(name string) (storage.Book, error) {
 }
 
 func (p *PGPool) SaveBook(item storage.Book) (id int64, err error) {
+	const op = "storage.postgres.books.SaveBook"
+
+	tx, err := p.pool.Begin(context.Background())
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(context.Background())
+			return
+		}
+
+		commitErr := tx.Commit(context.Background())
+		if commitErr != nil {
+			err = fmt.Errorf("%s: %w", op, err)
+		}
+	}()
+
 	err = p.pool.QueryRow(context.Background(), `
 		INSERT INTO books (name, author_id, genre_id, price)
-		VALUES ($1, $2, $3, $4)
+		VALUES (
+			$1,
+			(SELECT id FROM authors WHERE author = $2),
+			(SELECT id FROM genres WHERE genre = $3),
+			$4
+		)
 		RETURNING id;`,
 		item.Name,
 		item.Author,
@@ -69,7 +95,24 @@ func (p *PGPool) SaveBook(item storage.Book) (id int64, err error) {
 		item.Price,
 		).Scan(&id)
 	
-	return id, err
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	eventPayload := fmt.Sprintf(
+		`{"id:" %d, "name:", %s, "author:", %s, "genre:", %s, "price:", %s}`,
+		id,
+		item.Name,
+		item.Author,
+		item.Genre,
+		item.Price,
+	)
+
+	if err := p.SaveEvent(tx, statusBookCreated, eventPayload); err != nil {
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+	
+	return id, nil
 }
 
 func (p * PGPool) DeleteBook(name string) (error) {

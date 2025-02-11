@@ -53,7 +53,7 @@ func main() {
 	router.Route("/book", func(r chi.Router) {
 		r.Post("/", saveBook.New(log, storage))
 		r.Delete("/{book}", deleteBook.New(log, storage))
-		//r.Get("/{book}", takeBook.New(log, storage))
+		//r.Get("/{book}", takeBook.dNew(log, storage))
 		//r.Get("/", takeBooks.New(log, storage))
 		//r.Patch("/{book}", updateBook.New(log, storage))
 	})
