@@ -13,6 +13,8 @@ type Config struct {
 	Env        string `yaml:"env" env-default:"local"`
 	HttpServer `yaml:"http_server"`
 	DataBase   `yaml:"db"`
+	Clients    ClientConfig `yaml:"clients"`
+	AppSecret string `yaml:"app_secret" env-required:"true" env:"APP_SECRET"`
 }
 
 type HttpServer struct {
@@ -28,6 +30,17 @@ type DataBase struct {
 	Password string
 	DBName   string `yaml:"dbname"`
 	SSLMode  string `yaml:"sslmode"`
+}
+
+type Client struct {
+	Address      string        `yaml:"address"`
+	Timeout      time.Duration `yaml:"timeout"`
+	RetriesCount int           `yaml:"retriesCount"`
+	Insecure     bool          `yaml:"insecure"`
+}
+
+type ClientConfig struct {
+	SSO Client `yaml:"sso"`
 }
 
 func MustLoad() *Config {

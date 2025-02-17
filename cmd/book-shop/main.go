@@ -11,6 +11,9 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/stepan41k/testMidlware/internal/config"
+
+	ssogrpc "github.com/stepan41k/testMidlware/internal/clients/sso/grpc"
+
 	deleteAuthor "github.com/stepan41k/testMidlware/internal/http-server/handlers/author/delete"
 	saveAuthor "github.com/stepan41k/testMidlware/internal/http-server/handlers/author/save"
 	deleteBook "github.com/stepan41k/testMidlware/internal/http-server/handlers/book/delete"
@@ -36,6 +39,20 @@ func main() {
 	log.Info("info messages are enabled")
 	log.Debug("debug messages are enabled")
 	log.Error("error messages are enabled")
+
+	ssoClient, err := ssogrpc.New(
+		context.Background(),
+		log,
+		cfg.Clients.SSO.Address,
+		cfg.Clients.SSO.Timeout,
+		cfg.Clients.SSO.RetriesCount,
+	)
+	if err != nil {
+		log.Error("failed to init sso client", sl.Err(err))
+		os.Exit(1)
+	}
+
+	ssoClient.IsAdmin(context.Background(), 1)
 
 	storage, err := postgres.New(fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.Username, cfg.DBName, os.Getenv("DB_PASSWORD"), cfg.SSLMode))
