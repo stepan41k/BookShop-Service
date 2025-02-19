@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
+	"github.com/stepan41k/testMidlware/internal/domain"
 	resp "github.com/stepan41k/testMidlware/internal/lib/api/response"
 	"github.com/stepan41k/testMidlware/internal/lib/logger/sl"
 	"github.com/stepan41k/testMidlware/internal/storage"
@@ -20,7 +21,7 @@ type Response struct {
 }
 
 type BookSaver interface {
-	SaveBook(storage.Book) (int64, error)
+	SaveBook(domain.Book) (int64, error)
 }
 
 func New(log *slog.Logger, bookSaver BookSaver) http.HandlerFunc{
@@ -32,7 +33,7 @@ func New(log *slog.Logger, bookSaver BookSaver) http.HandlerFunc{
 			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
 
-		var req storage.Book
+		var req domain.Book
 
 		err := render.DecodeJSON(r.Body, &req)
 		if errors.Is(err, io.EOF) {
@@ -62,7 +63,7 @@ func New(log *slog.Logger, bookSaver BookSaver) http.HandlerFunc{
 			return
 		}
 
-		id, err := bookSaver.SaveBook(storage.Book{
+		id, err := bookSaver.SaveBook(domain.Book{
 			Name: req.Name,
 			Author: req.Author,
 			Genre: req.Genre,

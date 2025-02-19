@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/stepan41k/testMidlware/internal/storage"
+	"github.com/stepan41k/testMidlware/internal/domain"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 	statusBookUpdated = "BookUpdated"
 )
 
-func (p *PGPool) GetBooksByAuthor(author string) ([]storage.Book, error) {
+func (p *PGPool) GetBooksByAuthor(author string) ([]domain.Book, error) {
 	
 	rows, err := p.pool.Query(context.Background(), `
 		SELECT id, name, author_id, genre_id, price
@@ -26,9 +26,9 @@ func (p *PGPool) GetBooksByAuthor(author string) ([]storage.Book, error) {
 
 	defer rows.Close()
 
-	var data []storage.Book
+	var data []domain.Book
 	for rows.Next() {
-		var item storage.Book
+		var item domain.Book
 		err = rows.Scan(
 			&item.ID,
 			&item.Name,
@@ -45,7 +45,7 @@ func (p *PGPool) GetBooksByAuthor(author string) ([]storage.Book, error) {
 	return data, nil
 }
 
-func (p *PGPool) GetBooksByGenre(genre string) ([]storage.Book, error) {
+func (p *PGPool) GetBooksByGenre(genre string) ([]domain.Book, error) {
 	const op = "storage.postgres.books.GetBooksByGenre"
 
 	rows, err := p.pool.Query(context.Background(), `
@@ -60,9 +60,9 @@ func (p *PGPool) GetBooksByGenre(genre string) ([]storage.Book, error) {
 
 	defer rows.Close()
 
-	var data []storage.Book
+	var data []domain.Book
 	for rows.Next() {
-		var item storage.Book
+		var item domain.Book
 		err = rows.Scan(
 			&item.ID,
 			&item.Name,
@@ -79,7 +79,7 @@ func (p *PGPool) GetBooksByGenre(genre string) ([]storage.Book, error) {
 	return data, nil
 }
 
-func (p *PGPool) GetBookByName(name string) (book storage.Book, err error) {
+func (p *PGPool) GetBookByName(name string) (book domain.Book, err error) {
 	const op = "storage.postgres.books.GetBookByName"
 
 	err = p.pool.QueryRow(context.Background(), `
@@ -95,13 +95,13 @@ func (p *PGPool) GetBookByName(name string) (book storage.Book, err error) {
 	)
 
 	if err != nil {
-		return storage.Book{}, fmt.Errorf("%s: %w", op, err)
+		return domain.Book{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return book, nil
 }
 
-func (p *PGPool) SaveBook(item storage.Book) (id int64, err error) {
+func (p *PGPool) SaveBook(item domain.Book) (id int64, err error) {
 	const op = "storage.postgres.books.SaveBook"
 
 	tx, err := p.pool.Begin(context.Background())
@@ -171,7 +171,7 @@ func (p * PGPool) DeleteBook(name string) (error) {
 	return nil
 }
 
-func (p *PGPool) UpdateBook(oldBook string, newBook storage.Book)(error) {
+func (p *PGPool) UpdateBook(oldBook string, newBook domain.Book)(error) {
 	const op = "storage.postgres.books.UpdateBook"
 
 	_, err := p.pool.Exec(context.Background(), `

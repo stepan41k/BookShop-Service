@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/middleware"
+	"github.com/stepan41k/testMidlware/internal/domain"
 	resp "github.com/stepan41k/testMidlware/internal/lib/api/response"
-	"github.com/stepan41k/testMidlware/internal/storage"
 )
 
 type Request struct {
@@ -15,11 +15,11 @@ type Request struct {
 
 type Response struct {
 	resp.Response
-	storage.Book
+	domain.Book
 }
 
 type OneTaker interface {
-	TakeOne(name string) (storage.Book, error)
+	TakeOne(name string) (domain.Book, error)
 }
 
 func New(log *slog.Logger, oneTaker OneTaker) http.HandlerFunc {
